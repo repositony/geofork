@@ -145,8 +145,10 @@ def gen_plane(face, solid, tolerances):
     surf = face.Surface
     if str(surf) == "<Cylinder object>":
         return gen_plane_cylinder(face, solid, tolerances)
+
     if str(surf) == "<Cone object>":
         return gen_plane_cone(face, solid, tolerances)
+
     if str(surf) == "Sphere":
         return gen_plane_sphere(face, solid)
 
@@ -246,7 +248,48 @@ def get_u_value_boundary(solid, face_index, my_index):
             return u_min, u_max
 
 
+import sys
+
+
+def save_auxiliary_plane(output_filename, surface, shape):
+    # Enable console output redirection
+    FreeCAD.Console.PrintMessage = lambda s: sys.stdout.write(s)
+    FreeCAD.Console.PrintError = lambda s: sys.stderr.write(s)
+
+    print("saving plane - save_auxilary_plane")
+    # make bounding box
+    # Create a box with dimensions (Length, Width, Height)
+    print("making doc")
+    doc = FreeCAD.newDocument()
+
+    print("making a part")
+    part_bb = doc.addObject("Part::Feature", "Solid")
+    part_bb.Shape = shape.solid
+    bbox = part_bb.Shape.BoundBox
+
+    print(f"bounding box: {bbox}")
+    print(f"{bbox.XMin}")
+    SCALE = 2
+    box = Part.makeBox(SCALE * bbox.XLength, SCALE * bbox.YLength, SCALE * bbox.ZLength)
+    box.Placement.Base = FreeCAD.Vector(bbox.XMin, bbox.YMin, bbox.ZMin)
+
+    print("done with bb")
+
+    part = doc.addObject("Part::Feature", "Solid")
+    part.Shape = box
+
+    doc.recompute()
+
+    print("saving step file")
+    Part.export([part], output_filename)
+
+
 def gen_plane_sphere(face, solid):
+
+    print("  >>> gen_plane_sphere()")
+    print(face.Surface.Center)
+    print(face.CenterOfMass)
+
     same_faces = []
     same_faces.append(face)
 
@@ -262,21 +305,34 @@ def gen_plane_sphere(face, solid):
 
     # print same_faces
     normal = FreeCAD.Vector(0, 0, 0)
+
     for f in same_faces:
         normal += f.Area * (f.CenterOfMass - face.Surface.Center)
+        print(f" - normal = {normal}")
+
     normal.normalize()
+
     tmp_plane = Part.Plane(face.Surface.Center, normal).toShape()
+
+    # print("plane", tmp_plane.Surface.Center)
 
     dmin = 2 * face.Surface.Radius
     for f in same_faces:
         dist = tmp_plane.distToShape(f.__face__)[0]
+        print(f"  - dist = {dist}")
         dmin = min(dmin, dist)
 
+    # print("dmin = ", dmin)
+
     if dmin > 1e-6:
-        center = face.Surface.Center + 0.95 * dmin * normal
+        center = face.Surface.Center + (0.95 * dmin * normal)
         plane = Part.Plane(center, normal).toShape()
+        save_auxiliary_plane(r"T:\rworrall\geouned\spheres\aux_testing\test.step", plane, solid)
+        exit()
+
     else:
         plane = None
+
     return plane
 
 
@@ -297,6 +353,7 @@ def gen_plane_cylinder(face, solid, tolerances):
                 f"surface {str(surf)} removed from cell definition. Face area < Min area ({face2.Area} < {tolerances.min_area})"
             )
             continue
+
         if str(face2.Surface) == "<Cylinder object>" and not (face2.isEqual(face)):
             if (
                 face2.Surface.Axis.isEqual(face.Surface.Axis, 1e-5)
@@ -515,6 +572,7 @@ def cellDef(meta_obj, surfaces, universe_box, options, tolerances, numeric_forma
     del_list = []
 
     piece_def = BoolSequence(operator="OR")
+
     iece_obj = []
     cones = set()
     for isol, solid in enumerate(solids):
@@ -552,8 +610,10 @@ def cellDef(meta_obj, surfaces, universe_box, options, tolerances, numeric_forma
             if surface_type in ("<Cylinder object>", "<Cone object>", "Sphere") and orient == "Reversed":
                 # cone additional plane is added afterward
                 id_face = get_id(face.Surface, surfaces, options, tolerances, numeric_format)
+
                 if surface_type == "<Cone object>":
                     cones.add(id_face)
+
                 if str(id_face) not in surf_piece:
                     surf_piece.append(str(id_face))
                     surf_obj.append(face)

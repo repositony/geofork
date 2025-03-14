@@ -130,7 +130,8 @@ def get_void_def(
         nvoid = len(Initial)
         logger.info("Loop, Box to Split :{iloop}, {nvoid}")
 
-        for iz, z in enumerate(tqdm(Initial, desc=f"Void Generation Loop: {iloop}")):
+        # for iz, z in enumerate(tqdm(Initial, desc=f"Void Generation Loop: {iloop}")):
+        for iz, z in enumerate(Initial):
             nsurfaces, nbrackets = z.get_numbers()
             logger.info(f"{iloop} {iz + 1}/{nvoid} {nsurfaces} {nbrackets}")
 

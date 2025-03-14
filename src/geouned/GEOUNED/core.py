@@ -304,7 +304,8 @@ class CadToCsg:
 
         MetaChunk = []
         EnclosureChunk = []
-        for step_file in tqdm(step_files, desc="Loading CAD files"):
+        # for step_file in tqdm(step_files, desc="Loading CAD files"):
+        for step_file in step_files:
             logger.info(f"read step file : {step_file}")
             Meta, Enclosure = Load.load_cad(step_file, self.settings, self.options)
             MetaChunk.append(Meta)
@@ -378,6 +379,8 @@ class CadToCsg:
 
     def start(self):
 
+        print(">>> CadToCsg.start()")
+
         startTime = datetime.now()
 
         if self.settings.exportSolids:
@@ -410,7 +413,9 @@ class CadToCsg:
 
             # start Building CGS cells phase
 
-            for j, m in enumerate(tqdm(self.meta_list, desc="Translating solid cells")):
+            # for j, m in enumerate(tqdm(self.meta_list, desc="Translating solid cells")):
+            for j, m in enumerate(self.meta_list):
+                print(f"solid {j}")
                 if m.IsEnclosure:
                     continue
                 logger.info(f"Building cell: {j+1}")
@@ -422,10 +427,13 @@ class CadToCsg:
                     self.tolerances,
                     self.numeric_format,
                 )
+
                 if cones:
                     coneInfo[m.__id__] = cones
+
                 if j in warningSolidList:
                     warnSolids.append(m)
+
                 if not m.Solids:
                     logger.info(f"none {j}, {m.__id__}")
                     logger.info(m.Definition)
@@ -502,7 +510,8 @@ class CadToCsg:
                 for s in lst:
                     Surfs[s.Index] = s
 
-            for c in tqdm(self.meta_list, desc="Simplifying"):
+            # for c in tqdm(self.meta_list, desc="Simplifying"):
+            for c in self.meta_list:
                 if c.Definition.level == 0 or c.IsEnclosure:
                     continue
                 logger.info(f"simplify cell {c.__id__}")
@@ -593,7 +602,8 @@ class CadToCsg:
 
         totsolid = len(meta_list)
         warningSolids = []
-        for i, m in enumerate(tqdm(meta_list, desc=description)):
+        # for i, m in enumerate(tqdm(meta_list, desc=description)):
+        for i, m in enumerate(meta_list):
             if meta and m.IsEnclosure:
                 continue
             logger.info(f"Decomposing solid: {i + 1}/{totsolid}")
